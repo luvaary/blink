@@ -55,7 +55,7 @@ var (
 	baseURL          = "https://raw.githubusercontent.com/Aperture-OS/testing-blink-repo/refs/heads/main/pseudoRepo/" // Raw JSON base URL
 	defaultCachePath = "./blink/"                                                                                     // Default local cache directory
 	currentYear      = time.Now().Year()                                                                              // Current year for copyright
-	Version          = "v0.0.1-alpha"                                                                                 // Blink version
+	Version          = "v0.0.3-alpha"                                                                                 // Blink version
 	lockPath         = filepath.Join(defaultCachePath, "etc", "blink.lock")                                           // Path to lock file
 	supportPage      = `
 Having trouble? Join our Discord or open a GitHub issue.
