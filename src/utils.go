@@ -14,7 +14,7 @@
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the Apache 2.0 License
   along with this program.  If not, see <https://www.apache.org/licenses/LICENSE-2.0>.
 */
 
@@ -33,13 +33,11 @@ import (
 	"github.com/Aperture-OS/eyes"
 )
 
-/****************************************************/
 // Simple directory check and creation function, useful for ensuring directories exist before operations
-// Really useful for checking sourcePath, cachePath, etc.
+// Really useful for checking SourceDirPath, cachePath, etc.
 // This avoids repetitive code and enhances readability, its a simple boilerplate function so i only use it
 // for readability and modularity purposes, less repetition of code, dont expect rocket science from this, its
 // probably the simplest function in this entire codebase lmao
-/****************************************************/
 
 func checkDirAndCreate(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -50,14 +48,12 @@ func checkDirAndCreate(path string) error {
 	return nil
 }
 
-/****************************************************/
 // runCmd is another boilerplate function to run shell commands with error handling
 // captures stderr output for meaningful error messages
 // useful for running commands like tar, unzip, etc. with proper error handling
 // i love this because it improves readability and modularity, less repetitive code
 // and satisfies my KISS (Keep it simple stupid) principle, you just have a single function for running a command with ful on error handling
 // without reusing the same code for 8 billion times
-/****************************************************/
 
 func runCmd(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
@@ -73,10 +69,8 @@ func runCmd(name string, args ...string) error {
 	return nil
 }
 
-/****************************************************/
 // compareSHA256 takes in a expectedHash (so a string which is a sha256), and
 // a file, it decodes the file's hash and checks if it matches the expectedHash,
-/****************************************************/
 
 func compareSHA256(expectedHash, file string) (bool, error) { // takes a expectedHash and a file, it generates the file's sha256 and compares it with expectedHash
 	f, err := os.Open(file)
@@ -94,9 +88,7 @@ func compareSHA256(expectedHash, file string) (bool, error) { // takes a expecte
 	return strings.EqualFold(actual, expectedHash), nil
 }
 
-/****************************************************/
 // clean cleans the data folders like recipes and allat, yes thats it
-/****************************************************/
 
 func clean() error {
 
@@ -110,26 +102,28 @@ func clean() error {
 	switch response {
 
 	case "y", "yes", "sure", "yep", "ye", "yea", "yeah", "", "\n":
-		eyes.Infof("Acquiring lock at %s", lockPath)
-		if checkLock(lockPath) {
-			return fmt.Errorf("another instance is running, lock file exists at %s", lockPath)
+		eyes.Infof("Acquiring lock at %s", LockFilePath)
+
+		// Try to acquire the lock
+		if err := lock.Acquire(); err != nil {
+			eyes.Fatalf("Could not acquire lock: %v", err)
 		}
 
-		lockErr := addLock(lockPath) // add lock file
-		defer removeLock(lockPath)   // remove lock file at the end
+		// Make sure to release the lock when done
+		defer func() {
+			if err := lock.Release(); err != nil {
+				eyes.Errorf("Failed to release lock: %v", err)
+			}
+		}()
 
-		if lockErr != nil { // check for errors while adding lock
-			return fmt.Errorf("failed to create lock file at %s: %v", lockPath, lockErr)
-		}
+		os.RemoveAll(RecipeDirPath)
+		os.MkdirAll(RecipeDirPath, 0755)
 
-		os.RemoveAll(recipePath)
-		os.MkdirAll(recipePath, 0755)
+		os.RemoveAll(SourceDirPath)
+		os.MkdirAll(SourceDirPath, 0755)
 
-		os.RemoveAll(sourcePath)
-		os.MkdirAll(sourcePath, 0755)
-
-		os.RemoveAll(buildRoot)
-		os.MkdirAll(buildRoot, 0755)
+		os.RemoveAll(BuildDirPath)
+		os.MkdirAll(BuildDirPath, 0755)
 
 	default:
 		eyes.Fatalf("\nUser declined, exiting...")
@@ -140,17 +134,27 @@ func clean() error {
 
 }
 
-/****************************************************/
-// normalizeYesNo takes in a string and returns "yes" or "no" 
+// normalizeYesNo takes in a string and returns "yes" or "no"
 // simplified with lowering the input's case and trimming any space
 // its a boilerplate function to normalize user input, but its better
 // for kiss and readability.
-/****************************************************/
 func normalizeYesNo(s string) string {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "n", "no":
 		return "no"
 	default:
 		return "yes"
+	}
+}
+
+/***************************************************/
+// check if running as root (user id 0), exit if not
+/***************************************************/
+
+func requireRoot() {
+	if os.Geteuid() != 0 {
+		eyes.Fatalf(`This command must be run as Root or Super User (also known as Admin, Administrator, SU, etc.)
+		Please try again with 'sudo' infront of the command or as the root user ('su -').
+		`)
 	}
 }

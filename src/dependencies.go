@@ -14,7 +14,7 @@
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the Apache 2.0 License
   along with this program.  If not, see <https://www.apache.org/licenses/LICENSE-2.0>.
 */
 
@@ -30,16 +30,11 @@ import (
 )
 
 // note to others: this was a pain in the ass to implement but it works (hopefully)
-// have fun maintaining if youre a maintainer :D 
+// have fun maintaining if youre a maintainer :D
 // TIP: Check out github.com/Aperture-OS/togosort-dfs docs and comments in source code
 
-
-/****************************************************/
-//
 // Recursive helper to build dependency graph
 // IMPORTANT: AddEdge(A, B) == A depends on B
-//
-/****************************************************/
 func buildDepGraph(
 	graph *togosort.Graph,
 	pkgName string,
@@ -68,11 +63,7 @@ func buildDepGraph(
 	return nil
 }
 
-/****************************************************/
-//
 // Handle mandatory dependencies (DFS + topo)
-//
-/****************************************************/
 func handleMandatoryDeps(pkgName, path string) error {
 	graph := togosort.NewGraph()
 	visited := make(map[string]bool)
@@ -136,11 +127,7 @@ our Discord server. Run 'blink support' for more informations.`)
 	return nil
 }
 
-/****************************************************/
-//
 // Handle optional dependencies (DFS + topo per choice)
-//
-/****************************************************/
 func handleOptionalDeps(pkgName string, path string) error {
 	pkg, err := fetchpkg(path, false, pkgName, true)
 	if err != nil {

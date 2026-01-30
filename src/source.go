@@ -14,7 +14,7 @@
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the Apache 2.0 License
   along with this program.  If not, see <https://www.apache.org/licenses/LICENSE-2.0>.
 */
 
@@ -32,19 +32,17 @@ import (
 	"github.com/Aperture-OS/eyes"
 )
 
-/****************************************************/
 // getSource downloads the source code archive from the specified URL if it doesn't already exist or if force is true
-// This function checks if the source file already exists in the sourcePath directory. If it does not exist or if the isForce flag is set to true,
+// This function checks if the source file already exists in the SourceDirPath directory. If it does not exist or if the isForce flag is set to true,
 // it performs an HTTP GET request to download the source archive from the provided URL.
-// The downloaded file is saved in the sourcePath directory with its original filename.
+// The downloaded file is saved in the SourceDirPath directory with its original filename.
 // If the file already exists and isForce is false, it logs a warning and skips the download.
 // This function returns an error if any step of the process fails, allowing for proper error handling
 // in calling functions.
-/****************************************************/
 
 func getSource(url string, isForce bool) error {
 
-	if _, err := os.Stat(filepath.Join(sourcePath, filepath.Base(url))); os.IsNotExist(err) || isForce { // if recipe does not exist or force is true, download
+	if _, err := os.Stat(filepath.Join(SourceDirPath, filepath.Base(url))); os.IsNotExist(err) || isForce { // if recipe does not exist or force is true, download
 
 		if isForce { // if isForce is true, log it (isForce == true is useless because isForce already implies it exists and is true, so we simplify it to just isForce)
 			eyes.Infof("Force flag detected, re-downloading source from %s", url)
@@ -62,10 +60,10 @@ func getSource(url string, isForce bool) error {
 			return fmt.Errorf("failed to download recipe, status: %s", resp.Status)
 		}
 
-		checkDirAndCreate(sourcePath)
+		checkDirAndCreate(SourceDirPath)
 
 		// Create file to save source
-		outFile, err := os.Create(filepath.Join(sourcePath, filepath.Base(url)))
+		outFile, err := os.Create(filepath.Join(SourceDirPath, filepath.Base(url)))
 		if err != nil {
 			return fmt.Errorf("failed to create recipe file: %v", err)
 		}
@@ -83,18 +81,16 @@ func getSource(url string, isForce bool) error {
 	return nil
 }
 
-/****************************************************/
 // This takes in a PackageInfo struct and a URL, checks if the source
 // is already extracted, if not, it extracts the source based on the
 // specified type (tar, zip, etc.) uses the previous funcs for
 // improves modularity and readability by encapsulating extraction logic in a single function
-/****************************************************/
 
 func decompressSource(pkg PackageInfo, dest string) error {
 
 	eyes.Infof("Decompressing source for %s into %s", pkg.Name, dest)
 
-	srcFile := filepath.Join(sourcePath, filepath.Base(pkg.Source.URL))
+	srcFile := filepath.Join(SourceDirPath, filepath.Base(pkg.Source.URL))
 
 	if _, err := os.Stat(srcFile); err != nil {
 		return fmt.Errorf("source archive not found: %s", srcFile)
@@ -131,11 +127,9 @@ func decompressSource(pkg PackageInfo, dest string) error {
 	return cmd.Run()
 }
 
-/****************************************************/
 // postExtractDir returns the actual build directory inside dest.
 // If the archive extracted exactly one directory, it returns that.
 // Otherwise, it returns dest itself.
-/****************************************************/
 
 func postExtractDir(extractRoot string) (string, error) {
 	eyes.Infof("Scanning extract root %s", extractRoot)
@@ -155,12 +149,10 @@ func postExtractDir(extractRoot string) (string, error) {
 	return extractRoot, nil
 }
 
-/****************************************************/
 // safeExtractToRoot checks the extracted files for path traversal
 // vulnerabilities and returns an error if any are found.
 // It takes in a PackageInfo struct and the extractRoot directory
 // and returns an error if any unsafe paths are found.
-/****************************************************/
 
 func safeExtractToRoot(pkg PackageInfo, extractRoot string) error {
 	// reuse existing extractor

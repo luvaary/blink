@@ -14,16 +14,14 @@
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the Apache 2.0 License
   along with this program.  If not, see <https://www.apache.org/licenses/LICENSE-2.0>.
 */
 
-/****************************************************/
 // Manifest creation and dependency handling functions
 // a manifest is a TOML file that keeps track of installed packages,
-// their versions, and installation timestamps
+// their CurrentBlinkVersions, and installation timestamps
 // this is useful for managing installed packages, checking for updates, and handling dependencies
-/****************************************************/
 package main
 
 import (
@@ -37,15 +35,15 @@ import (
 
 // ensureManifest makes sure the manifest file exists and creates it if it doesn't
 func ensureManifest() error {
-	eyes.Infof("Ensuring manifest exists at %s", manifestPath)
+	eyes.Infof("Ensuring manifest exists at %s", ManifestFilePath)
 
-	if err := os.MkdirAll(filepath.Dir(manifestPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(ManifestFilePath), 0755); err != nil {
 		return err
 	}
 
-	if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
+	if _, err := os.Stat(ManifestFilePath); os.IsNotExist(err) {
 		m := Manifest{Installed: []InstalledPkg{}}
-		file, err := os.Create(manifestPath)
+		file, err := os.Create(ManifestFilePath)
 		if err != nil {
 			return err
 		}
@@ -56,35 +54,31 @@ func ensureManifest() error {
 	return nil
 }
 
-/****************************************************/
 // loadManifest loads the manifest from disk
-/****************************************************/
 func loadManifest() (Manifest, error) {
 	eyes.Infof("Loading manifest")
 
 	var m Manifest
-	if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
+	if _, err := os.Stat(ManifestFilePath); os.IsNotExist(err) {
 		return Manifest{Installed: []InstalledPkg{}}, nil
 	}
 
-	if _, err := toml.DecodeFile(manifestPath, &m); err != nil {
+	if _, err := toml.DecodeFile(ManifestFilePath, &m); err != nil {
 		return m, err
 	}
 
 	return m, nil
 }
 
-/****************************************************/
 // saveManifest writes the manifest back to disk safely
-/****************************************************/
 func saveManifest(m Manifest) error {
 	eyes.Infof("Saving manifest (%d packages)", len(m.Installed))
 
-	if err := os.MkdirAll(filepath.Dir(manifestPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(ManifestFilePath), 0755); err != nil {
 		return err
 	}
 
-	tmp := manifestPath + ".tmp"
+	tmp := ManifestFilePath + ".tmp"
 
 	file, err := os.Create(tmp)
 	if err != nil {
@@ -96,7 +90,7 @@ func saveManifest(m Manifest) error {
 		return err
 	}
 
-	return os.Rename(tmp, manifestPath)
+	return os.Rename(tmp, ManifestFilePath)
 }
 
 // manifestHas checks if a package is already in the manifest
@@ -115,17 +109,13 @@ func manifestHas(name string) (*InstalledPkg, bool, error) {
 	return nil, false, nil
 }
 
-/****************************************************/
 // isInstalled checks if a package is installed by name
-/****************************************************/
 func isInstalled(pkg string) bool {
 	_, ok, err := manifestHas(pkg)
 	return err == nil && ok
 }
 
-/****************************************************/
 // addToManifest adds a package to the manifest if it doesn't already exist
-/****************************************************/
 func addToManifest(pkg PackageInfo) error {
 	eyes.Infof("adding %s to manifest", pkg.Name)
 
@@ -150,9 +140,7 @@ func addToManifest(pkg PackageInfo) error {
 	return saveManifest(m)
 }
 
-/****************************************************/
 // removeFromManifest removes a package from the manifest if it exists
-/****************************************************/
 func removeFromManifest(pkg PackageInfo) error {
 	eyes.Infof("removing %s from manifest", pkg.Name)
 

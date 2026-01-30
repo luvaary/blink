@@ -14,15 +14,13 @@
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the Apache 2.0 License
   along with this program.  If not, see <https://www.apache.org/licenses/LICENSE-2.0>.
 */
 
 package main
 
-/****************************************************/
 // PackageInfo represents the JSON structure of a package recipe
-/****************************************************/
 type PackageInfo struct {
 	Name        string   `json:"name"`        // Package name
 	Version     string   `json:"version"`     // Package version
@@ -51,28 +49,24 @@ type PackageInfo struct {
 	} `json:"build"`
 }
 
-/****************************************************/
 // Manifest represents Blink's installed package database
-/****************************************************/
 
 type Manifest struct {
 	Installed []InstalledPkg `json:"installed"`
 }
 
-/****************************************************/
 // InstalledPkg represents a package entry in the manifest
-/****************************************************/
 type InstalledPkg struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 	Release int64  `json:"release"`
 }
 
-/****************************************************/
-// RepoConfig represents the structure of the config.toml
-/****************************************************/
+// RepoConfig holds repository information from the config file
 type RepoConfig struct {
-	Name string
-	URL  string
-	Ref  string
+	Name       string `toml:"-"`          // Optional, not in TOML
+	URL        string `toml:"git_url"`    // Maps git_url in TOML
+	Ref        string `toml:"branch"`     // Maps branch in TOML
+	Hash       string `toml:"hash"`       // Optional pinned commit
+	TrustedKey string `toml:"trustedKey"` // GPG key path as the root of the repository (eg. "/key.pub")
 }

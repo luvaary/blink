@@ -13,7 +13,7 @@
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-#  You should have received a copy of the GNU General Public License
+#  You should have received a copy of the Apache 2.0 License
 #  along with this program.  If not, see <https://www.apache.org/licenses/LICENSE-2.0>.
 
 APP := main

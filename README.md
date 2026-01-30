@@ -14,11 +14,11 @@ Blink is a source-based package manager designed for performance and control. It
 
 ## Features
 
-- **Fast and Efficient:** Optimized for speed and minimal resource usage.  
-- **Dependency Management:** Handles package dependencies automatically.  
-- **User-Friendly CLI:** Intuitive commands for installing, removing, and updating packages.  
-- **Custom Repository Support:** Easily add and manage multiple repositories.  
-- **Cross-Distro Ready:** Can be adapted for other Linux distributions with minimal effort.  
+- **Fast and Efficient:** Optimized for speed and minimal resource usage.
+- **Dependency Management:** Handles package dependencies automatically.
+- **User-Friendly CLI:** Intuitive commands for installing, removing, and updating packages.
+- **Custom Repository Support:** Easily add and manage multiple repositories.
+- **Cross-Distro Ready:** Can be adapted for other Linux distributions with minimal effort.
 - **Extensible:** Modular design allows for easy plugin and feature extensions.
 
 ## Contribute

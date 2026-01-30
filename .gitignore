@@ -44,3 +44,6 @@ var-blink/*
 testing*
 testing*/*
 *.null
+root
+root/
+root/*

@@ -13,21 +13,18 @@ Here you will find the instructions on how to Contribute to Blink, its Package R
 # The Package Repository
 
 The package repository is a repository on GitHub, GitLab, CodeBerg, or a http(s) mirror (http(s) Mirrors aren't recommended), containing all the package recipes (.json files with all the data for a package to be installed), it's root ( / ) directory looks something like:
+
 ```tree
-.
-├── repositoryName1
-│   ├── package.json
-│   ├── package2.json
-│   ├── package3.json
-│   └── etc.json
-├── repositoryName2
-│   ├── package4.json
-│   ├── package5.json
-│   ├── package6.json
-│   └── etcetera.json  
-├── README.md (optional)
-├── LICENSE (optional)
-└── CONTRIBUTING.md (recommended, this file)
+https://github.com/ProjectName/repositoryName1/ Would look like: (same for precompiled)
+└── recipes/
+    ├── package1.json
+    ├── package2.json
+    ├── package3.json
+    └── etc...
+README.md (optional)
+CONTRIBUTING.md (recommeded, copy paste this file and edit to your needs)
+key.pub (gpg signing key)
+LICENSE (optional)
 ```
 
 `package.json` would look something like this:
@@ -47,17 +44,13 @@ The package repository is a repository on GitHub, GitLab, CodeBerg, or a http(s)
   },
   "dependencies": {
     "dependency1": ">=1.0.0",
-	"dependency2": ">=1.0.0"
+    "dependency2": ">=1.0.0"
   },
   "opt_dependencies": [
     {
       "id": 1,
       "description": "This gets shown in the optional dependency resolution for group id: 1.",
-      "options": [
-        "opt-dep1",
-		"opt-dep2",
-		"opt-dep3",
-      ]
+      "options": ["opt-dep1", "opt-dep2", "opt-dep3"]
     }
   ],
 
@@ -83,26 +76,26 @@ The package repository is a repository on GitHub, GitLab, CodeBerg, or a http(s)
   "description": "Package is a package.",
   "author": "example.com",
   "license": "MIT",
-````
+```
 
 ### `name`
 
-* The **unique identifier** of the package.
-* This is what users will install (`blink install package`).
-* **\*\*\* MUST BE THE NAME OF THE FILE WITHOUT .json \*\*\***
-* Should be lowercase, consistent, and stable.
+- The **unique identifier** of the package.
+- This is what users will install (`blink install package`).
+- **\*\*\* MUST BE THE NAME OF THE FILE WITHOUT .json \*\*\***
+- Should be lowercase, consistent, and stable.
 
 ### `version`
 
-* The upstream software version.
-* Used for dependency resolution and upgrades.
-* Follows semantic versioning (`major.minor.patch`) when possible.
+- The upstream software version.
+- Used for dependency resolution and upgrades.
+- Follows semantic versioning (`major.minor.patch`) when possible.
 
 ### `release`
 
-* A Unix timestamp determining when the package was last updated.
-* Used to distinguish multiple package builds of the same version.
-* Useful alias:
+- A Unix timestamp determining when the package was last updated.
+- Used to distinguish multiple package builds of the same version.
+- Useful alias:
 
 ```sh
 alias now='date +%s'
@@ -111,20 +104,19 @@ alias copynow='date +%s | wl-copy' # for wayland
 
 ### `description`
 
-* Short, human-readable summary of the package.
-* Shown in search results and package info.
+- Short, human-readable summary of the package.
+- Shown in search results and package info.
 
 ### `author`
 
-* The upstream author or project homepage.
-* Can be a name, URL, or organization.
-* Usually the GitHub/GitLab/CodeBerg page of the author
+- The upstream author or project homepage.
+- Can be a name, URL, or organization.
+- Usually the GitHub/GitLab/CodeBerg page of the author
 
 ### `license`
 
-* The software license identifier.
-* Should be SPDX-compatible when possible (`MIT`, `GPL-3.0`, etc).
-
+- The software license identifier.
+- Should be SPDX-compatible when possible (`MIT`, `GPL-3.0`, etc).
 
 ## 2. Source Definition
 
@@ -140,16 +132,17 @@ If it's a precompiled package use this as the precompiled archive definition.
 
 ### `url`
 
-* Location of the source archive or binary.
-* Can point to GitHub releases, mirrors, or custom servers.
-* **MUST BE RAW FILE DOWNLOAD (Compatible with curl/wget)**
+- Location of the source archive or binary.
+- Can point to GitHub releases, mirrors, or custom servers.
+- **MUST BE RAW FILE DOWNLOAD (Compatible with curl/wget)**
+- Incase of a precompiled package put them in repository/packages/pack1.tar.gz and then link it as a raw Git file. (the http(s) raw link, not a local path!)
 
 ### `sha256`
 
-* Cryptographic hash of the downloaded file.
-* Ensures **integrity and security**.
-* Blink verifies this before building or installing.
-* To find it: Either look for one in the release tab of GitHub/Lab/CodeBerg
+- Cryptographic hash of the downloaded file.
+- Ensures **integrity and security**.
+- Blink verifies this before building or installing.
+- To find it: Either look for one in the release tab of GitHub/Lab/CodeBerg
 
 Or find it manually:
 
@@ -159,10 +152,9 @@ sha256sum sourcefile.tar.gz # or any other extension
 
 ### `type`
 
-* Archive or file type.
-* Used to determine how Blink extracts or handles the source.
-* Supported values: `.tar.gz`, `.tar.bz2`, `.tar.xs`, `.zip`
-
+- Archive or file type.
+- Used to determine how Blink extracts or handles the source.
+- Supported values: `.tar.gz`, `.tar.bz2`, `.tar.xs`, `.zip`
 
 ## 3. Dependencies
 
@@ -175,16 +167,15 @@ sha256sum sourcefile.tar.gz # or any other extension
 
 ### `dependencies`
 
-* Required packages that **must be installed**.
-* Version constraints are supported.
-* Blink resolves and installs these automatically.
+- Required packages that **must be installed**.
+- Version constraints are supported.
+- Blink resolves and installs these automatically.
 
 Examples:
 
-* `>=1.0.0` -> at least version 1.0.0
-* `=2.1.3` -> exact version
-* `<3.0.0` -> any version below 3.0.0
-
+- `>=1.0.0` -> at least version 1.0.0
+- `=2.1.3` -> exact version
+- `<3.0.0` -> any version below 3.0.0
 
 ## 4. Optional Dependencies
 
@@ -204,24 +195,23 @@ Examples:
 
 ### `opt_dependencies`
 
-* Non-essential features users can choose to install.
-* Presented interactively or via flags.
+- Non-essential features users can choose to install.
+- Presented interactively or via flags.
 
 #### `id`
 
-* Group identifier.
-* Allows Blink to group related optional dependencies together.
+- Group identifier.
+- Allows Blink to group related optional dependencies together.
 
 #### `description`
 
-* Shown to the user when resolving optional dependencies.
-* Explains *why* these options exist.
+- Shown to the user when resolving optional dependencies.
+- Explains _why_ these options exist.
 
 #### `options`
 
-* List of package names the user may select from.
-* Installing one or more is optional.
-
+- List of package names the user may select from.
+- Installing one or more is optional.
 
 ## 5. Build Instructions
 
@@ -231,19 +221,16 @@ Examples:
 
 This section defines **how the package is built, installed, and removed**.
 
-
 ### 5.1 Build Kind
 
 ```json
     "kind": "toCompile"
 ```
 
-* Determines how Blink handles the package.
-* Possible values:
-
-  * `toCompile` -> build from source
-  * `preCompiled` -> install binaries directly
-
+- Determines how Blink handles the package.
+- Possible values:
+  - `toCompile` -> build from source
+  - `preCompiled` -> install binaries directly
 
 ### 5.2 Build Environment
 
@@ -253,10 +240,9 @@ This section defines **how the package is built, installed, and removed**.
     },
 ```
 
-* Environment variables used during build.
-* Injected into the build process.
-* Useful for parallel builds, paths, or compiler flags.
-
+- Environment variables used during build.
+- Injected into the build process.
+- Useful for parallel builds, paths, or compiler flags.
 
 ### 5.3 Prepare Step
 
@@ -264,16 +250,14 @@ This section defines **how the package is built, installed, and removed**.
     "prepare": ["rm -rf ~/.cache/test"],
 ```
 
-* Commands run **before building**.
+- Commands run **before building**.
 
-* Used to:
+- Used to:
+  - Clean previous builds
+  - Patch files
+  - Prepare directories
 
-  * Clean previous builds
-  * Patch files
-  * Prepare directories
-
-* Executed in order, line by line.
-
+- Executed in order, line by line.
 
 ### 5.4 Install Step
 
@@ -281,10 +265,9 @@ This section defines **how the package is built, installed, and removed**.
     "install": ["make install PREFIX=${PREFIX:-/usr/local}"],
 ```
 
-* Commands used to install files into the system or staging directory.
-* `${PREFIX}` allows relocatable installs.
-* Defaults to `/usr/local` if not provided.
-
+- Commands used to install files into the system or staging directory.
+- `${PREFIX}` allows relocatable installs.
+- Defaults to `/usr/local` if not provided.
 
 ### 5.5 Uninstall Step
 
@@ -292,10 +275,9 @@ This section defines **how the package is built, installed, and removed**.
     "uninstall": ["make uninstall PREFIX=${PREFIX:-/usr/local}"]
 ```
 
-* Commands used to remove the package.
-* Ensures clean removal without leftovers.
-* Optional but strongly recommended.
-
+- Commands used to remove the package.
+- Ensures clean removal without leftovers.
+- Optional but strongly recommended.
 
 ## 6. Full Lifecycle Summary
 
@@ -307,11 +289,121 @@ This section defines **how the package is built, installed, and removed**.
 6. **Install** files to the system
 7. **Optionally remove** via uninstall instructions
 
-
 ## Notes & Best Practices
 
-* Keep recipes deterministic and reproducible
-* Always include checksums
-* Prefer clear version constraints
-* Use optional dependencies for feature toggles
-* Test install *and* uninstall paths
+- Keep recipes deterministic and reproducible
+- Always include checksums
+- Prefer clear version constraints
+- Use optional dependencies for feature toggles
+- Test install _and_ uninstall paths
+
+# Signing your Package Repository
+
+## This is a must! Blink will not proceed to clone the repository without a proper Commit signature!
+
+Blink uses GPG commit signatures to verify the authenticity of repositories. This ensures that repositories have not been tampered with and that only trusted sources are used. Signing commits allows Blink to verify that the code you provide comes from you and has not been modified by others.
+
+Follow these steps to properly sign your repository:
+
+### 1. Generate a GPG Key
+
+If you do not already have a GPG key, generate one by running:
+
+```bash
+gpg --full-generate-key
+```
+
+During the setup:
+
+1. Select the key type. Choose RSA and RSA
+2. Set a key size. 4096 bits is recommended. ( the more the better :D )
+3. Enter your name and an email address. This email must match the email you use in Git (`git config user.email`).
+4. Provide a passphrase to protect your private key. (Make it secure!)
+
+Keep your private key safe and never share it. You will use it to sign commits. The public key will be shared to allow verification.
+
+### 2. Configure Git to Use Your GPG Key
+
+Tell Git which GPG key to use for signing commits:
+
+```bash
+git config --global user.signingkey <YOUR_KEY_ID>
+git config --global commit.gpgsign true
+```
+
+Replace `<YOUR_KEY_ID>` with the long ID of your key. You can find your keys with:
+
+```bash
+gpg --list-secret-keys --keyid-format LONG
+```
+
+`<YOUR_KEY_ID>` is
+
+```bash
+[keyboxd]
+---------
+sec   rsa4096/ABCDEFGHIJKLMNOP 2026-01-01 [SC]
+      THIS_IS_YOUR_KEY_ID_ABCDEFGHI1234567890
+uid                 [ultimate] Name (Comment) <mail@example.com>
+ssb   rsa4096/ABCDEFGHIJKLMNOP 2026-01-01 [E]
+```
+
+Make sure your Git email matches the email in your key:
+
+```bash
+git config --global user.email "your_email@example.com"
+```
+
+### 3. Sign Your Commits
+
+When committing changes to your repository, Git will automatically sign the commits if you enabled `commit.gpgsign`. You can also sign individual commits manually:
+
+```bash
+git commit -S -m "Your commit message"
+```
+
+Make sure `-S` is used! That's the signing flag.
+
+To verify that a commit is signed correctly:
+
+```bash
+git log --show-signature -1
+```
+
+This will show the commit signature and whether it is verified.
+
+### 4. Export Your Public Key
+
+Blink requires the public key to verify your repository. Export your key to a file:
+
+```bash
+gpg --armor --export "<YOUR_KEY_ID>" > key.pub
+```
+
+Place `key.pub` in the root of your repository. Blink will use this key to verify that commits are signed by you.
+
+### 5. Push Signed Commits
+
+After signing your commits, push them to your remote repository:
+
+```bash
+git push --force origin main
+```
+
+Make sure the latest commit is signed. Blink will verify the signature and reject any commits that are not properly signed.
+
+### 6. Update Blink Repository Configuration
+
+In your Blink repository configuration, specify the path to the public key:
+
+```toml
+[[repositories]]
+name = "your-repo-name"
+url = "https://github.com/ProjectName/blink-repo-1.git"
+ref = "main"  # branch, optional
+trusted_key = "/key.pub" # from the root of the repo, make sure of the /
+```
+
+Blink will use `trusted_key` to verify commits and `hash` to optionally pin the repository to a specific commit.
+
+Following these steps ensures that your repository is secure and trusted by Blink. All contributors must use signed commits if they want Blink to verify and use their repository safely.

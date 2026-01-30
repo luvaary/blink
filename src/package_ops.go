@@ -14,16 +14,16 @@
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the Apache 2.0 License
   along with this program.  If not, see <https://www.apache.org/licenses/LICENSE-2.0>.
 */
 
 package main
 
 import (
-	"io"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,48 +31,49 @@ import (
 	"github.com/Aperture-OS/eyes"
 )
 
-/****************************************************/
 // getPkg downloads a package recipe from the repository and saves it to the specified path
 // you can use this standalone to just download recipes if you want, but usually this is
 // called internally by other functions, ensuring reusing code, modularity, and less repetition
-/****************************************************/
 
 func getpkg(pkgName string, path string) error {
 	eyes.Infof("Getting package recipe from local repository...")
 
 	// acquire lock
-	eyes.Infof("Acquiring lock at %s", lockPath)
-	if checkLock(lockPath) {
-		return fmt.Errorf("another instance is running, lock file exists at %s", lockPath)
+	eyes.Infof("Acquiring lock at %s", LockFilePath)
+
+	// Try to acquire the lock
+	if err := lock.Acquire(); err != nil {
+		eyes.Fatalf("Could not acquire lock: %v", err)
 	}
 
-	lockErr := addLock(lockPath)
-	defer removeLock(lockPath)
-	if lockErr != nil {
-		return fmt.Errorf("failed to create lock file at %s: %v", lockPath, lockErr)
-	}
+	// Make sure to release the lock when done
+	defer func() {
+		if err := lock.Release(); err != nil {
+			eyes.Errorf("Failed to release lock: %v", err)
+		}
+	}()
 
 	// ensure path ends with separator
 	if !strings.HasSuffix(path, string(os.PathSeparator)) {
 		path += string(os.PathSeparator)
 	}
 
-	repos, err := LoadRepos(configPath)
+	repos, err := LoadRepos(ConfigFilePath)
 	if err != nil {
+		return fmt.Errorf("repositories could not be loaded.")
 	}
 
 	// make sure cache directories exist
 	checkDirAndCreate(filepath.Join(path, "recipes"))
 
 	// ensure repository is cloned/pulled
-	if err := ensureRepo(false); err != nil {
+	if err := ensureRepoOnce(false); err != nil {
 		return fmt.Errorf("failed to update repository: %v", err)
 	}
 
-	repo, wasRepoFound := FindRepoByName(pkgName, repos)
-
-	if !wasRepoFound {
-		eyes.Errorf("Repository not found for package %s", pkgName)
+	repo, srcPath, err := FindRepoForPackage(pkgName, repos)
+	if err != nil {
+		return err
 	}
 
 	destPath := filepath.Join(path, "recipes", pkgName+".json")
@@ -82,9 +83,10 @@ func getpkg(pkgName string, path string) error {
 		eyes.Warnf("Recipe %s already exists, overwriting...", destPath)
 	}
 
-	srcPath := filepath.Join(
-		repoCachePath,
+	srcPath = filepath.Join(
+		LocalRepositoryDirPath,
 		repo.Name,
+		"recipes",
 		pkgName+".json",
 	)
 
@@ -102,12 +104,10 @@ func getpkg(pkgName string, path string) error {
 	return nil
 }
 
-/****************************************************/
 // fetchPkg fetches a package recipe from cache or repository, decodes it, and displays package info
 // in addition, it returns the PackageInfo struct for further use, so you can use this function to both
 // get the struct and show the info to the user, avoiding code repetition and enhancing modularity
 // avoids 2 functions for fetching and displaying info separately
-/****************************************************/
 
 func fetchpkg(path string, force bool, pkgName string, quiet bool) (PackageInfo, error) {
 
@@ -119,12 +119,12 @@ func fetchpkg(path string, force bool, pkgName string, quiet bool) (PackageInfo,
 		path += string(os.PathSeparator)
 	}
 
-	recipePath := filepath.Join(path, "recipes", pkgName+".json")
+	RecipeDirPath := filepath.Join(path, "recipes", pkgName+".json")
 
 	if force {
-		if err := os.Remove(recipePath); err == nil {
+		if err := os.Remove(RecipeDirPath); err == nil {
 			if !quiet {
-				eyes.Infof("Force flag detected, removed cached recipe at %s", recipePath)
+				eyes.Infof("Force flag detected, removed cached recipe at %s", RecipeDirPath)
 			}
 		} else if !os.IsNotExist(err) {
 			if !quiet {
@@ -133,7 +133,7 @@ func fetchpkg(path string, force bool, pkgName string, quiet bool) (PackageInfo,
 		}
 	}
 
-	if _, err := os.Stat(recipePath); os.IsNotExist(err) {
+	if _, err := os.Stat(RecipeDirPath); os.IsNotExist(err) {
 		if !quiet {
 			eyes.Infof("Package recipe not found. Downloading...")
 		}
@@ -142,7 +142,7 @@ func fetchpkg(path string, force bool, pkgName string, quiet bool) (PackageInfo,
 		}
 	}
 
-	f, err := os.Open(recipePath)
+	f, err := os.Open(RecipeDirPath)
 	if err != nil {
 		eyes.Fatalf("Failed to open package recipe.\nERR: %v", err)
 		return PackageInfo{}, fmt.Errorf("error opening file: %v", err)
@@ -157,31 +157,31 @@ func fetchpkg(path string, force bool, pkgName string, quiet bool) (PackageInfo,
 
 	if !quiet {
 
-		repos, err := LoadRepos(configPath)
+		repos, err := LoadRepos(ConfigFilePath)
 		if err != nil {
 			return PackageInfo{}, fmt.Errorf("repositories could not be loaded.")
 		}
 
 		// ensure repository is cloned/pulled
-		if err := ensureRepo(false); err != nil {
+		if err := ensureRepoOnce(false); err != nil {
 			return PackageInfo{}, fmt.Errorf("failed to update repository: %v", err)
 		}
 
-		repo, wasRepoFound := FindRepoByName(pkgName, repos)
-
-		if !wasRepoFound {
-			eyes.Errorf("Repository not found for package %s", pkgName)
+		repo, _, err := FindRepoForPackage(pkgName, repos)
+		if err != nil {
+			return PackageInfo{}, err
 		}
 
 		fmt.Printf(`Repository: %q (%s)
-Name:        %s
-Version:     %s
-Release:     %d
+Name       :        %s
+Version    :     %s
+Release    :     %d
 Description: %s
-Author:      %s
-License:     %s
+Author     :      %s
+License    :     %s
 
-`, repo.Name, repo.URL, pkg.Name, pkg.Version, pkg.Release, pkg.Description, pkg.Author, pkg.License)
+`, repo.Name, repo.URL, pkg.Name, pkg.Version,
+			pkg.Release, pkg.Description, pkg.Author, pkg.License)
 
 		eyes.Infof("Package fetching completed.")
 	}
@@ -189,13 +189,10 @@ License:     %s
 	return pkg, nil
 }
 
-/****************************************************/
 // install function downloads, decompresses, builds, and installs a package
 // it fetches package info, downloads source, decompresses it
 // it uses the getSource, decompressSource functions for modularity and to satisfy my KISS principle
 // i wish golang had macros so i could avoid writing the same error handling code every single time and just have a single line for it
-/****************************************************/
-
 func install(pkgName string, force bool, path string) error {
 	// manifest must exist BEFORE touching it
 	if err := ensureManifest(); err != nil {
@@ -238,175 +235,106 @@ func install(pkgName string, force bool, path string) error {
 	}
 
 	packageKind := strings.ToLower(strings.TrimSpace(pkg.Build.Kind))
-
-	switch packageKind {
-
-	case "toCompile":
-
-		// prepare build root
-		if err := os.MkdirAll(buildRoot, 0755); err != nil {
-			return err
-		}
-
-		extractRoot := filepath.Join(buildRoot, pkg.Name)
-
-		_ = os.RemoveAll(extractRoot)
-		if err := os.MkdirAll(extractRoot, 0755); err != nil {
-			return err
-		}
-
-		// download source
-		if err := getSource(pkg.Source.URL, force); err != nil {
-			return err
-		}
-
-		srcFile := filepath.Join(sourcePath, filepath.Base(pkg.Source.URL))
-		ok, err := compareSHA256(pkg.Source.Sha256, srcFile)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			eyes.Errorf("Source hash mismatch for %s", srcFile)
-			return fmt.Errorf("source hash mismatch for %s", srcFile)
-		}
-
-		// extract
-		if err := decompressSource(pkg, extractRoot); err != nil {
-			return err
-		}
-
-		buildDir, err := postExtractDir(extractRoot)
-		if err != nil {
-			return err
-		}
-
-		if err := os.Chdir(buildDir); err != nil {
-			return err
-		}
-
-		// env
-		for k, v := range pkg.Build.Env {
-			eyes.Infof("Setting environment variables.")
-			os.Setenv(k, v)
-		}
-
-		// prepare
-		for _, cmd := range pkg.Build.Prepare {
-			eyes.Infof("Preparing Build environment.")
-			if err := runCmd("sh", "-c", cmd); err != nil {
-				return err
-			}
-		}
-
-		// install
-		for _, cmd := range pkg.Build.Install {
-			eyes.Infof("Installing package.")
-			if err := runCmd("sh", "-c", cmd); err != nil {
-				return err
-			}
-		}
-
-	case "preCompiled":
-		eyes.Infof("Installing precompiled package %s", pkg.Name)
-
-		// prepare build root
-		if err := os.MkdirAll(buildRoot, 0755); err != nil {
-			return err
-		}
-
-		extractRoot := filepath.Join(buildRoot, pkg.Name)
-
-		_ = os.RemoveAll(extractRoot)
-		if err := os.MkdirAll(extractRoot, 0755); err != nil {
-			return err
-		}
-
-		// download source
-		if err := getSource(pkg.Source.URL, force); err != nil {
-			return err
-		}
-
-		srcFile := filepath.Join(sourcePath, filepath.Base(pkg.Source.URL))
-		ok, err := compareSHA256(pkg.Source.Sha256, srcFile)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			eyes.Errorf("Source hash mismatch for %s", srcFile)
-			return fmt.Errorf("source hash mismatch for %s", srcFile)
-		}
-
-		// extract
-		if err := decompressSource(pkg, extractRoot); err != nil {
-			return err
-		}
-
-		buildDir, err := postExtractDir(extractRoot)
-		if err != nil {
-			return err
-		}
-
-		if err := os.Chdir(buildDir); err != nil {
-			return err
-		}
-
-		// extract safely
-		if err := safeExtractToRoot(pkg, extractRoot); err != nil {
-			return err
-		}
-
-		// default behavior: copy filesystem layout to /
-		err = filepath.Walk(extractRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		rel, err := filepath.Rel(extractRoot, path)
-		if err != nil {
-			return err
-		}
-		if rel == "." {
-			return nil
-		}
-
-		target := filepath.Join("/", rel)
-
-		// directories
-		if info.IsDir() {
-			return os.MkdirAll(target, info.Mode())
-		}
-
-		// skip symlinks (important for package installs)
-		if info.Mode()&os.ModeSymlink != 0 {
-			return nil
-		}
-
-		// ensure parent dir exists
-		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-			return err
-		}
-
-		in, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer in.Close()
-
-		out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
-		if err != nil {
-			return err
-		}
-		defer out.Close()
-
-		_, err = io.Copy(out, in)
-		return err
-	})
-
-	if err != nil {
+	buildRoot := filepath.Join(BuildDirPath, pkg.Name)
+	_ = os.RemoveAll(buildRoot)
+	if err := os.MkdirAll(buildRoot, 0755); err != nil {
 		return err
 	}
 
-		// optional post-install commands
+	// always remember old working dir
+	oldDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	defer os.Chdir(oldDir) // restore after build
+
+	switch packageKind {
+	case "tocompile":
+		if err := getSource(pkg.Source.URL, force); err != nil {
+			return err
+		}
+		srcFile := filepath.Join(SourceDirPath, filepath.Base(pkg.Source.URL))
+		ok, err := compareSHA256(pkg.Source.Sha256, srcFile)
+		if err != nil || !ok {
+			return fmt.Errorf("source hash mismatch for %s", srcFile)
+		}
+
+		if err := decompressSource(pkg, buildRoot); err != nil {
+			return err
+		}
+
+		buildDir, err := postExtractDir(buildRoot)
+		if err != nil {
+			return err
+		}
+		if err := os.Chdir(buildDir); err != nil {
+			return err
+		}
+
+		for k, v := range pkg.Build.Env {
+			os.Setenv(k, v)
+		}
+
+		for _, cmd := range pkg.Build.Prepare {
+			if err := runCmd("sh", "-c", cmd); err != nil {
+				return err
+			}
+		}
+		for _, cmd := range pkg.Build.Install {
+			if err := runCmd("sh", "-c", cmd); err != nil {
+				return err
+			}
+		}
+
+	case "precompiled":
+		if err := safeExtractToRoot(pkg, buildRoot); err != nil {
+			return err
+		}
+		err = filepath.Walk(buildRoot, func(src string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			rel, err := filepath.Rel(buildRoot, src)
+			if err != nil {
+				return err
+			}
+			if rel == "." {
+				return nil
+			}
+
+			target := filepath.Join("/", rel)
+			if info.IsDir() {
+				return os.MkdirAll(target, info.Mode())
+			}
+
+			if info.Mode()&os.ModeSymlink != 0 {
+				return nil
+			}
+
+			// copy with immediate close
+			in, err := os.Open(src)
+			if err != nil {
+				return err
+			}
+			defer in.Close()
+
+			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+				return err
+			}
+
+			out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
+			if err != nil {
+				return err
+			}
+			defer out.Close()
+
+			_, err = io.Copy(out, in)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+
 		for _, cmd := range pkg.Build.Install {
 			if err := runCmd("sh", "-c", cmd); err != nil {
 				return err
@@ -417,11 +345,7 @@ func install(pkgName string, force bool, path string) error {
 		return fmt.Errorf("unknown build kind: %s", pkg.Build.Kind)
 	}
 
-	// record install
-	if err := addToManifest(pkg); err != nil {
-		return err
-	}
-	return nil
+	return addToManifest(pkg)
 }
 
 /*
@@ -431,9 +355,7 @@ func install(pkgName string, force bool, path string) error {
  *  proper contribution but if u add gems good job!) (hi from 27/12/2025 22:49 CET)
  */
 
-/****************************************************/
 // uninstall uninstalls a package
-/****************************************************/
 
 func uninstall(pkgName string, force bool, path string) error {
 	// manifest must exist BEFORE touching it
@@ -458,11 +380,11 @@ func uninstall(pkgName string, force bool, path string) error {
 	}
 
 	// prepare build root
-	if err := os.MkdirAll(buildRoot, 0755); err != nil {
+	if err := os.MkdirAll(BuildDirPath, 0755); err != nil {
 		return err
 	}
 
-	extractRoot := filepath.Join(buildRoot, pkg.Name)
+	extractRoot := filepath.Join(BuildDirPath, pkg.Name)
 
 	_ = os.RemoveAll(extractRoot)
 	if err := os.MkdirAll(extractRoot, 0755); err != nil {
@@ -474,7 +396,7 @@ func uninstall(pkgName string, force bool, path string) error {
 		return err
 	}
 
-	srcFile := filepath.Join(sourcePath, filepath.Base(pkg.Source.URL))
+	srcFile := filepath.Join(SourceDirPath, filepath.Base(pkg.Source.URL))
 	ok, err := compareSHA256(pkg.Source.Sha256, srcFile)
 	if err != nil {
 		return err
@@ -520,12 +442,10 @@ func uninstall(pkgName string, force bool, path string) error {
 	return nil
 }
 
-/****************************************************/
 // updateAll updates all installed packages that have
 // a newer Release in the repo, using the manifest's release as
 // reference, it takes that and it checks if the Manifest's Release
 // is smaller than the repo release, if so, install the package again
-/****************************************************/
 func updateAll(path string) error {
 
 	requireRoot()
@@ -537,7 +457,7 @@ func updateAll(path string) error {
 
 	// sync repositories first
 	eyes.Infof("Syncing repositories...")
-	if err := ensureRepo(false); err != nil {
+	if err := ensureRepoOnce(false); err != nil {
 		return fmt.Errorf("failed to sync repositories: %v", err)
 	}
 
